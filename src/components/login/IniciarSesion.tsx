@@ -1,6 +1,8 @@
 import { Mail, Lock, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { postLogin} from "../../services/login/iniciarSesion.services.ts";
+import { useHookUsuario } from "./hook/user.hook.ts";
+import { useNavigate } from "react-router-dom";
 
 type LoginFormData = {
     correo: string;
@@ -9,7 +11,7 @@ type LoginFormData = {
 };
 
 function IniciarSesion() {
-
+    const  navigate = useNavigate();
     const {
         register: registerLogin,
         handleSubmit: handleSubmitLogin,
@@ -17,9 +19,23 @@ function IniciarSesion() {
     } = useForm<LoginFormData>();
 
     const onLoginSubmit = async (data: LoginFormData) => {
-        console.log('Login Data:', data);
         const respuestaLogin =  await postLogin(data.correo, data.contrasenia, data.nombreUsuario);
-        console.log(respuestaLogin);
+        let userData = {};
+
+        if (respuestaLogin.data) {
+            userData = {
+                id: respuestaLogin.data.id,
+                rol: respuestaLogin.data.rol,
+                token: respuestaLogin.data.token,
+            };
+        }
+        useHookUsuario.getState().login(userData);
+        if ( respuestaLogin.data.rol === 'user' )  {
+            navigate('/');
+        } else {
+            navigate('/admin');
+        }
+
     };
 
     return (
