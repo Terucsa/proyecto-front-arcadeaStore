@@ -1,38 +1,71 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import {postJuegos} from "../../services/juegos/Juegos.services.ts";
+import { postJuegos } from "../../services/juegos/Juegos.services.ts";
+import { useNavigate } from "react-router-dom";
 
 type JuegoFormData = {
     nombreJuego: string;
     categoriaJuego: string;
     precio: number;
-    logoJuego: FileList;
+    logoJuego: string; // Cambiado a string
     juegoTerminado: boolean;
     categoriaEdad: string;
 };
 
 function AgregarJuegoForm() {
     const [previewSvg, setPreviewSvg] = useState<string>("");
+    const [svgFile, setSvgFile] = useState<File | null>(null);
+    const  navigate = useNavigate();
 
     const {
         register,
         handleSubmit,
         formState: { errors },
+        setValue,
     } = useForm<JuegoFormData>();
 
     const onSubmit = async (data: JuegoFormData) => {
-        console.log("Datos del juego:", data);
-        const respuesta = await postJuegos(data)
+        try {
+            let svgContent = "";
+            if (svgFile) {
+                svgContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target?.result as string);
+                    reader.onerror = reject;
+                    reader.readAsText(svgFile);
+                });
+            }
+
+            const juegoData = {
+                ...data,
+                logoJuego: svgContent
+            };
+            const respuesta = await postJuegos(juegoData);
+
+            if (respuesta.data) {
+                alert("Juego agregado correctamente");
+            }
+        } catch (error) {
+            console.error("Error al guardar el juego:", error);
+        }
     };
 
     const handleSvgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && file.type === "image/svg+xml") {
+            setSvgFile(file);
+
             const reader = new FileReader();
             reader.onload = (e) => {
-                setPreviewSvg(e.target?.result as string);
+                const svgContent = e.target?.result as string;
+                setPreviewSvg(svgContent);
+                setValue("logoJuego", "svg_subido");
             };
             reader.readAsText(file);
+        } else if (file) {
+            setSvgFile(null);
+            setPreviewSvg("");
+            setValue("logoJuego", "");
         }
     };
 
@@ -86,6 +119,7 @@ function AgregarJuegoForm() {
                         <p className="text-red-500 text-xs mt-1">{errors.categoriaJuego.message}</p>
                     )}
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Precio (Q) *
@@ -121,23 +155,12 @@ function AgregarJuegoForm() {
                         className={`text-gray-900 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 ${
                             errors.logoJuego ? 'border-red-500' : 'border-gray-300'
                         }`}
-                        {...register("logoJuego", {
-                            required: "El logo SVG es obligatorio",
-                            validate: {
-                                isSvg: (files) => {
-                                    if (files && files[0]) {
-                                        return files[0].type === "image/svg+xml" ||
-                                            "El archivo debe ser un SVG";
-                                    }
-                                    return true;
-                                }
-                            }
-                        })}
                         onChange={handleSvgChange}
                     />
                     {errors.logoJuego && (
                         <p className="text-red-500 text-xs mt-1">{errors.logoJuego.message}</p>
                     )}
+
                     {previewSvg && (
                         <div className="mt-4 p-4 border border-gray-300 rounded-lg">
                             <p className="text-sm font-medium text-gray-700 mb-2">Vista previa:</p>

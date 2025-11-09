@@ -4,11 +4,6 @@ import { useHookUsuario } from "./login/hook/user.hook.ts";
 import { useAdminViewStore } from "./admin/hook/formularioTable.hook.ts";
 import { useState } from "react";
 
-type titulo = {
-    funcion: string;
-    nombre: string;
-}
-
 function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [tituloButton, setTituloButton] = useState({
